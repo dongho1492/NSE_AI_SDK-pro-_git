@@ -35,6 +35,10 @@ namespace NSE
 				Utils::ImageSaver::getInstance().startImageSaveThread();
 			}
 
+			if (e_configCSVLogSaveMode) {
+				Utils::CSVLogSaver::getInstance().startCSVLogSaveThread();
+			}
+
 			const std::string buildInfo = std::string("Build Version: ") + RELEASE_VERSION;
 			const std::string buildDate = std::string("Build Date: ") + BUILD_DATE;
 			e_Utils.logMessagePrint(buildInfo);
@@ -46,6 +50,7 @@ namespace NSE
 			e_Utils.logMessagePrint("[image_save_mode] (0=OFF, 1=JPG, 2=PNG, 3=ALL)  : " + std::to_string(e_configImageSaveMode));
 			e_Utils.logMessagePrint("[threshold_cla] (0->ProgramBase)  : " + std::to_string(e_configThresholdCla));
 			e_Utils.logMessagePrint("[heatmap_cla] (1->ON)  : " + std::to_string(e_configHeatmapCla));
+			e_Utils.logMessagePrint("[CSVLog_save_mode] (0->OFF, 1->ON)  : " + std::to_string(e_configCSVLogSaveMode));
 
 			//Utils::checkProgramAdmin();
 			//Utils::runNvidiaSMI();
@@ -69,8 +74,10 @@ namespace NSE
 
 			if (e_configImageSaveMode)
 				Utils::ImageSaver::getInstance().stopImageSaveThread();
-		}
 
+			if (e_configCSVLogSaveMode)
+				Utils::CSVLogSaver::getInstance().stopCSVLogSaveThread();
+		}
 
 		int GpuCla::initialAIModel()
 		{
@@ -369,9 +376,14 @@ namespace NSE
 				cv::applyColorMap(cam, heatmap, cv::COLORMAP_JET);
 				cv::addWeighted(image, 0.5, heatmap, 0.5, 0, heatmap);
 
-				// 분리된 이미지 저장 함수 호출
+				// 이미지 저장 함수 호출
 				if (e_configImageSaveMode) {
 					saveHeatmapImage(image, heatmap, classId);
+				}
+
+				// CSVLog 저장 함수 호출
+				if (e_configCSVLogSaveMode) {
+					saveCSVLog(classId);
 				}
 
 				double minVal, maxVal;
@@ -532,6 +544,17 @@ namespace NSE
 			catch (const std::exception& e) { e_Utils.handleException(e, "Error in saveHeatmapImage"); }
 		}
 
+		void GpuCla::saveCSVLog(int classId) {
+
+			if (e_configCSVLogSaveMode) {
+				// 오늘 날짜 (YYYY-MM-DD) 기반 폴더 경로 생성
+				std::string secMinTime = e_Utils.makeTime("time");
+
+				Utils::CSVLogSaver::getInstance().pushCSVLogEntry(secMinTime, "product", classId, 0, 0);
+			}
+		
+		}
+		
 		// 확률 임계값 검사 함수
 		int GpuCla::checkProbabilityThreshold(int classId, double confidence, float probThresh)
 		{
@@ -968,7 +991,7 @@ namespace NSE
 				}
 
 				keepRunning.store(true);
-				imageSaveThread = std::thread(&ImageSaver::runImageSaveThread	, &ImageSaver::getInstance());
+				imageSaveThread = std::thread(&ImageSaver::runImageSaveThread, &ImageSaver::getInstance());
 
 			} catch (std::exception& e) { e_Utils.handleException(e, "Error in startImageSaveThread"); }
 		}
@@ -983,6 +1006,92 @@ namespace NSE
 				}
 			} catch (std::exception& e) { e_Utils.handleException(e, "Error in stopImageSaveThread"); }
 		}
+
+
+
+		void CSVLogSaver::startCSVLogSaveThread() {
+			if (running.load()) {
+				return;
+			}
+
+			running.store(true);
+			logThread = std::thread(&CSVLogSaver::runCSVLogSaveThread, this);
+		}
+
+		void CSVLogSaver::stopCSVLogSaveThread() {
+			if (!running.load()) {
+				return;
+			}
+
+			running.store(false);
+			dataCV.notify_one();  // 스레드 깨우기
+			if (logThread.joinable()) 
+				logThread.join();
+		}
+
+		void CSVLogSaver::runCSVLogSaveThread() {
+			while (running.load()) {
+				LogEntry entry;
+
+				{
+					std::unique_lock<std::mutex> lock(queueMutex);
+					// 큐에 데이터가 없으면 대기
+					dataCV.wait(lock, [this] { return !logQueue.empty() || !running; });
+
+					if (!running && logQueue.empty()) 
+						break;
+
+					// 큐에서 데이터 꺼내기
+					entry = logQueue.front();
+					logQueue.pop_front();
+				}
+
+				// CSV 라인 구성 및 저장
+				std::ostringstream oss;
+				oss << entry.timestamp << "," << entry.productName << ","
+					<< entry.total << "," << entry.good << "," << entry.bad;
+
+				writeCSVLogToFile(oss.str(), entry.timestamp.substr(0, 10));  // 날짜로 파일명 결정
+			}
+		}
+
+		void CSVLogSaver::pushCSVLogEntry(const std::string& currentTime, const std::string& productName, int total, int ok, int ng) {
+			std::lock_guard<std::mutex> lock(queueMutex);
+			logQueue.push_back({
+				currentTime,
+				productName,
+				total,
+				ok,
+				ng
+				});
+			dataCV.notify_one();  // 데이터 추가됨 알림
+		}
+
+		bool CSVLogSaver::writeCSVLogToFile(const std::string& line, const std::string& date) {
+
+			std::string time_yearmonday = e_Utils.makeTime("yearmonday");
+			std::string filePath = e_pathLogRecord + "\\" + time_yearmonday + ".csv";
+
+			// 파일이 존재하는지 확인
+			bool fileExists = std::filesystem::exists(filePath);
+			std::ofstream ofs(filePath, std::ios::app);
+
+			if (!ofs.is_open()) 
+				return false;
+
+			// 헤더 자동 추가
+			if (!fileExists) {
+				ofs << "시간,제품명,Result,empty,empty\n";
+			}
+
+			ofs << line << "\n";
+			ofs.close();
+			return true;
+		}
+
+
+
+
 
 		double Utils::getCurrentTime()
 		{
@@ -1091,8 +1200,8 @@ namespace NSE
 				}
 				else if (format == "time") {
 					// 시-분-초 형식 (HH:MM:SS)
-					ss << std::setfill('0') << std::setw(2) << tm.tm_hour << ":"
-						<< std::setfill('0') << std::setw(2) << tm.tm_min << ":"
+					ss << std::setfill('0') << std::setw(2) << tm.tm_hour << "-"
+						<< std::setfill('0') << std::setw(2) << tm.tm_min << "-"
 						<< std::setfill('0') << std::setw(2) << tm.tm_sec;
 				}
 				else {
@@ -1300,7 +1409,7 @@ namespace NSE
 				e_configImageSaveMode = std::stoi(configs["image_save_mode"]);
 				e_configThresholdCla = std::stoi(configs["threshold_cla"]);
 				e_configHeatmapCla = std::stoi(configs["heatmap_cla"]);
-
+				e_configCSVLogSaveMode = std::stoi(configs["CSVLog_save_mode"]);
 				
 			} catch (std::exception& e) { e_Utils.handleException(e, "Error in loadSettings"); }
 		}

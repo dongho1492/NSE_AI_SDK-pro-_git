@@ -47,13 +47,7 @@ extern int e_configProccesMode;
 extern int e_configImageSaveMode;
 extern int e_configThresholdCla;
 extern int e_configHeatmapCla;
-
-
-#define SAVE_IMAGE_HEATMAP 0
-
-#if SAVE_IMAGE_HEATMAP
-
-#endif
+extern int e_configCSVLogSaveMode;
 
 
 

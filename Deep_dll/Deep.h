@@ -53,6 +53,7 @@ namespace NSE
 			int useGpuPeriod();
 			void saveInferenceImage(const cv::Mat& image, int result_cla);
 			void saveHeatmapImage(const cv::Mat& image, const cv::Mat& heatmap, int result_cla);
+			void saveCSVLog(int classId);
 
 			int checkProbabilityThreshold(int classId, double confidence, float probThresh);
 
@@ -150,6 +151,50 @@ namespace NSE
 			std::thread imageSaveThread;
 		};
 
+		// class ImageSaver : 이미지 저장 기능
+		class DEEP_API CSVLogSaver
+		{
+		public:
+			static CSVLogSaver& getInstance() {
+				static CSVLogSaver instance;
+				return instance;
+			}
+
+			void startCSVLogSaveThread();
+			void stopCSVLogSaveThread();
+			
+			// 검사 스레드에서 로그 데이터 추가
+			void pushCSVLogEntry(const std::string& currentTime, const std::string& productName, int total, int ok, int ng);
+
+		private:
+			CSVLogSaver() = default;
+			~CSVLogSaver() { stopCSVLogSaveThread(); }
+
+			CSVLogSaver(const CSVLogSaver&) = delete;
+			CSVLogSaver& operator=(const CSVLogSaver&) = delete;
+			CSVLogSaver(CSVLogSaver&&) = delete;
+			CSVLogSaver& operator=(CSVLogSaver&&) = delete;
+
+			void runCSVLogSaveThread();
+			bool writeCSVLogToFile(const std::string& line, const std::string& date);
+
+			// 로그 데이터 구조
+			struct LogEntry {
+				std::string timestamp;
+				std::string productName;
+				int total;
+				int good;
+				int bad;
+			};
+
+			// 공유 리소스
+			std::deque<LogEntry> logQueue;
+			std::mutex queueMutex;
+			std::condition_variable dataCV;
+
+			std::atomic<bool> running{ false };
+			std::thread logThread;
+		};
 
 		// class ConfigManager : 설정 값 관리 (Config.ini 파일 저장 및 로드)
 		class DEEP_API ConfigManager
