@@ -1,0 +1,11 @@
+# 2023.09.04
+- 간단한 SDK 사용 설명서입니다.
+ 
+1. Model_onnx_init 실행 시 cmd 창에 Load 할 .onnx 모델의 경로를 입력해 줍니다.
+   "Please enter the Model path: "
+\\InspectionTeam\AI\AI_SDK_Lib\Intellisense_AI\Model\Model_main.onnx
+=> 현재는 D:\Intellisense_AI\Model\Model_main.onnx  로 고정됨.
+
+2. Model_onnx_run 실행 시  cmd 창에 추론할 이미지들의 폴더를 입력합니다. (경로 끝에 \ 추가)
+   "Please enter the folder path: "
+G:\Program\NSE_Deep\DB_CLA\DB_Lotte_Mandu\Dataset_230830\test\NG\

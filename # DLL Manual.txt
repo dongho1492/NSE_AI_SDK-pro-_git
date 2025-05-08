@@ -1,0 +1,12 @@
+# 지원 함수
+ 1) static DEEP_API int Model_onnx_init();
+ 2) static DEEP_API int Model_onnx_run(unsigned int* Img_Buf, int w, int h);
+ 3) static DEEP_API int Model_onnx_infer();
+
+1) Model_onnx_init : AI 모델을 불러옵니다. (절대경로 D:\Intellisense_AI\Model\Model_main.onnx)
+
+2) Model_onnx_run : AI 모델로 실시간 추론을 합니다. 입력 이미지는 1D unsigned char* g_Img_Buf 형태로 입력해 주세요.
+(Ex: g_Img_Buf, 512, 512)
+
+// 3) Model_onnx_infer : AI모델로 추론 결과를 테스트합니다. (절대경로 D:\Intellisense_AI\Image\test)
+// 폴더 안에 이미지를 넣으면 순차적으로 추론하여 cmd창에 결과 반환.

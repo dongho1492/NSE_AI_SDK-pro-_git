@@ -1,0 +1,21 @@
+# Build folders
+x64/
+x86/
+Debug/
+Release/
+
+# Visual Studio files
+.vs/
+*.suo
+*.user
+*.VC.db
+
+# Binaries
+*.dll
+*.lib
+*.pdb
+*.exe
+
+# External packages
+packages/
+opencv_4_7_0/
