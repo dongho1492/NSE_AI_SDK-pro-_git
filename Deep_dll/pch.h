@@ -18,7 +18,7 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////
 #define PROJECT_NAME    "NSE_AI_SDK(pro)"
 #define VERSION_MAJOR   1
-#define VERSION_MINOR   2
+#define VERSION_MINOR   3
 #define VERSION_PATCH   0
 
 #define RELEASE_VERSION PROJECT_NAME " v" \
