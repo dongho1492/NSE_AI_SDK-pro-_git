@@ -140,6 +140,7 @@ BEGIN_MESSAGE_MAP(CNSEAISDKDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON12, &CNSEAISDKDlg::OnBnClickedButton12)
 	ON_BN_CLICKED(IDC_BUTTON13, &CNSEAISDKDlg::OnBnClickedButton13)
 	ON_BN_CLICKED(IDC_BUTTON14, &CNSEAISDKDlg::OnBnClickedButton14)
+	ON_BN_CLICKED(IDC_BUTTON15, &CNSEAISDKDlg::OnBnClickedButton15)
 END_MESSAGE_MAP()
 
 
@@ -528,4 +529,13 @@ void CNSEAISDKDlg::OnBnClickedButton14()
 			AfxMessageBox(CString("[DLL Error] AI Model is Inference \n") + CString(e.what()));
 		}
 	}
+}
+
+
+void CNSEAISDKDlg::OnBnClickedButton15()
+{
+	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
+
+
+
 }

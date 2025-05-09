@@ -48,7 +48,7 @@ extern int e_configImageSaveMode;
 extern int e_configThresholdCla;
 extern int e_configHeatmapCla;
 extern int e_configCSVLogSaveMode;
-
+extern int e_configOntimerMode;
 
 
 

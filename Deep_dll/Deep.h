@@ -220,6 +220,26 @@ namespace NSE
 			void loadSettings();
 			void printAllSettings();
 		};
+
+		class DEEP_API SingleTimer {
+		public:
+			SingleTimer();
+			~SingleTimer();
+
+			void start(int interval_ms, std::function<void()> callback);
+			void stop();
+			bool isRunning() const;
+
+		private:
+			void timerLoop();
+
+			std::thread worker;
+			std::atomic<bool> running{false};
+			int interval{0};
+			std::function<void()> task;
+		};
+
+
 	}
 
 }

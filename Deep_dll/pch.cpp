@@ -22,3 +22,4 @@ int e_configImageSaveMode;
 int e_configThresholdCla;
 int e_configHeatmapCla;
 int e_configCSVLogSaveMode;
+int e_configOntimerMode;

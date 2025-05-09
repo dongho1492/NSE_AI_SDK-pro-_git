@@ -13,6 +13,10 @@ namespace NSE
 
 	CV::BaseIsOpencv e_Opencv;
 
+	Utils::SingleTimer e_Timer1;
+	Utils::SingleTimer e_Timer2;
+
+
 	namespace AI {
 		// ONNX 객체들을 포함하는 구조체 정의 (캡슐화)
 		struct NSE::AI::GpuCla::OrtObjects {
@@ -51,6 +55,7 @@ namespace NSE
 			e_Utils.logMessagePrint("[threshold_cla] (0->ProgramBase)  : " + std::to_string(e_configThresholdCla));
 			e_Utils.logMessagePrint("[heatmap_cla] (1->ON)  : " + std::to_string(e_configHeatmapCla));
 			e_Utils.logMessagePrint("[CSVLog_save_mode] (0->OFF, 1->ON)  : " + std::to_string(e_configCSVLogSaveMode));
+			e_Utils.logMessagePrint("[ontimer_mode] (0->OFF, 1->ON)  : " + std::to_string(e_configOntimerMode));
 
 			//Utils::checkProgramAdmin();
 			//Utils::runNvidiaSMI();
@@ -112,6 +117,27 @@ namespace NSE
 				}
 			
 				int stateInfer = useGpuPeriod();
+
+				if (e_configOntimerMode) {
+					e_Timer1.start(1000, []() {
+						std::cout << "1초 타이머 실행\n";
+						});
+
+					e_Timer2.start(500, []() {
+						std::cout << "0.5초 타이머 실행\n";
+						});
+
+					std::this_thread::sleep_for(std::chrono::seconds(5));
+
+					e_Timer1.stop();
+					std::cout << "1초 타이머 정지\n";
+
+					std::this_thread::sleep_for(std::chrono::seconds(10));
+
+					e_Timer2.stop();
+					std::cout << "0.5초 타이머 정지\n";
+
+				}
 
 				return 0;
 
@@ -1410,7 +1436,8 @@ namespace NSE
 				e_configThresholdCla = std::stoi(configs["threshold_cla"]);
 				e_configHeatmapCla = std::stoi(configs["heatmap_cla"]);
 				e_configCSVLogSaveMode = std::stoi(configs["CSVLog_save_mode"]);
-				
+				e_configOntimerMode = std::stoi(configs["ontimer_mode"]);
+
 			} catch (std::exception& e) { e_Utils.handleException(e, "Error in loadSettings"); }
 		}
 
@@ -1423,6 +1450,45 @@ namespace NSE
 					std::cout << pair.first << " : " << pair.second << std::endl;
 				}
 			} catch (std::exception& e) { e_Utils.handleException(e, "Error in printAllSettings"); }
+		}
+
+
+		// ================================= TimerPool (타이머 부분) =================================
+
+		SingleTimer::SingleTimer() {}
+
+		SingleTimer::~SingleTimer() {
+			stop();
+		}
+
+		void SingleTimer::start(int interval_ms, std::function<void()> callback) {
+			if (running.load()) return;
+
+			interval = interval_ms;
+			task = callback;
+			running = true;
+
+			worker = std::thread(&SingleTimer::timerLoop, this);
+		}
+
+		void SingleTimer::stop() {
+			running = false;
+			if (worker.joinable())
+				worker.join();
+		}
+
+		bool SingleTimer::isRunning() const {
+			return running.load();
+		}
+
+		void SingleTimer::timerLoop() {
+			while (running.load()) {
+				auto startTime = std::chrono::steady_clock::now();
+				if (task) 
+					task();
+
+				std::this_thread::sleep_until(startTime + std::chrono::milliseconds(interval));
+			}
 		}
 	}
 }
